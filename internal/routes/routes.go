@@ -14,7 +14,7 @@ import (
 type RouterConfig struct {
 	ConnectionDataHandler *connection_data.ConnectionHandler
 	TokenHandler          *token.JWTHandler
-	TenantHandler         *tenant.TenantHandler
+	TenantHandler         *tenant.Handler
 	AuditHandler          *audit.Handler
 	AuthMiddleware        *middleware.AuthMiddleware
 	MCPHandler            http.Handler

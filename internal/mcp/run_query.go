@@ -1,4 +1,4 @@
-package tools
+package mcp
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 )
 
 type QueryInput struct {
-	SQL string `json:"sql" jsonschema:"o sql a ser executado"`
+	SQL string `json:"sql" jsonschema:"sql code to be executed"`
 }
 
 type QueryOutput struct {

@@ -42,7 +42,7 @@ func (r *Repository) GetTokenByJTI(jti string) (*JWTToken, error) {
 
 	err := r.db.Get(&token, query, jti)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("token not found")
 		}
 		return nil, fmt.Errorf("failed to get token: %w", err)
