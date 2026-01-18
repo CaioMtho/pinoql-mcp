@@ -37,7 +37,7 @@ func SetupRoutes(r *gin.Engine, cfg *RouterConfig) {
 	}
 
 	connections := api.Group("/connections")
-	connections.Use(cfg.AuthMiddleware.RequireAPIKey())
+	connections.Use()
 	{
 		connections.POST("", cfg.ConnectionDataHandler.CreateConnection)
 		connections.GET("", cfg.ConnectionDataHandler.ListConnections)
@@ -47,15 +47,15 @@ func SetupRoutes(r *gin.Engine, cfg *RouterConfig) {
 	}
 
 	jwt := api.Group("/jwt")
-	jwt.Use(cfg.AuthMiddleware.RequireAPIKey())
+	jwt.Use()
 	{
-		jwt.POST("/issue", cfg.TokenHandler.IssueToken)
-		jwt.POST("/revoke", cfg.TokenHandler.RevokeToken)
-		jwt.GET("/list", cfg.TokenHandler.ListTokens)
+		jwt.POST("/issue", cfg.TokenHandler.Issue)
+		jwt.POST("/revoke", cfg.TokenHandler.Revoke)
+		jwt.GET("/list", cfg.TokenHandler.List)
 	}
 
 	auditRoutes := api.Group("/audit")
-	auditRoutes.Use(cfg.AuthMiddleware.RequireAPIKey())
+	auditRoutes.Use()
 	{
 		auditRoutes.GET("/logs", cfg.AuditHandler.ListLogs)
 		auditRoutes.GET("/stats", cfg.AuditHandler.GetStats)

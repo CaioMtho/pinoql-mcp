@@ -3,9 +3,9 @@ package token
 import "time"
 
 type JWTToken struct {
-	JTI           string     `json:"jti" db:"jti"` // JWT ID (claim "jti")
+	JTI           string     `json:"jti" db:"jti"`
 	TenantID      string     `json:"tenant_id" db:"tenant_id"`
-	ConnectionIDs string     `json:"connection_ids" db:"connection_ids"` // JSON array string
+	ConnectionIDs string     `json:"connection_ids" db:"connection_ids"`
 	IssuedAt      time.Time  `json:"issued_at" db:"issued_at"`
 	ExpiresAt     time.Time  `json:"expires_at" db:"expires_at"`
 	Revoked       bool       `json:"revoked" db:"revoked"`
@@ -13,11 +13,9 @@ type JWTToken struct {
 }
 
 type NewJWTToken struct {
-	JTI           string    `json:"jti" db:"jti" validate:"required"`
-	TenantID      string    `json:"tenant_id" db:"tenant_id" validate:"required"`
-	ConnectionIDs string    `json:"connection_ids" db:"connection_ids" validate:"required"`
-	IssuedAt      time.Time `json:"issued_at" db:"issued_at"`
-	ExpiresAt     time.Time `json:"expires_at" db:"expires_at"`
+	TenantID      string   `json:"tenant_id" validate:"required"`
+	ConnectionIDs []string `json:"connection_ids" validate:"required,min=1"`
+	TTLSeconds    int      `json:"ttl_seconds" validate:"required,min=60,max=86400"`
 }
 
 type JWTTokenQuery struct {

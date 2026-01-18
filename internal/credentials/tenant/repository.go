@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -17,17 +18,19 @@ func NewTenantRepository(db *sqlx.DB) *Repository {
 }
 
 func (r *Repository) InsertTenant(data NewTenant) (*TenantQuery, error) {
+	id := generateTenantID()
+
 	query := `
 		INSERT INTO tenants (id, name, is_active)
-		VALUES (:id, :name, 1)
+		VALUES (?, ?, 1)
 	`
 
-	_, err := r.db.NamedExec(query, data)
+	_, err := r.db.Exec(query, id, data.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert tenant: %w", err)
 	}
 
-	return r.GetTenantByID(data.ID)
+	return r.GetTenantByID(id)
 }
 
 func (r *Repository) GetTenantByID(id string) (*TenantQuery, error) {
@@ -144,4 +147,8 @@ func (r *Repository) HardDeleteTenant(id string) error {
 	}
 
 	return nil
+}
+
+func generateTenantID() string {
+	return fmt.Sprintf("tenant_%s", uuid.New().String()[:12])
 }

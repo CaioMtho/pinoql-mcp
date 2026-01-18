@@ -15,19 +15,11 @@ func NewConnectionHandler(repo *Repository) *ConnectionHandler {
 }
 
 func (h *ConnectionHandler) CreateConnection(c *gin.Context) {
-	tenantID := c.GetString("tenant_id")
-	if tenantID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant_id not found in context"})
-		return
-	}
-
 	var req NewConnectionData
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	req.TenantID = tenantID
 
 	result, err := h.repo.InsertConnection(req)
 	if err != nil {

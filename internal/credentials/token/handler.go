@@ -1,43 +1,37 @@
 package token
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
-	claims "github.com/CaioMtho/pinoql-mcp/internal/credentials/claims"
+	"github.com/CaioMtho/pinoql-mcp/internal/credentials/claims"
 	"github.com/CaioMtho/pinoql-mcp/internal/credentials/connection_data"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 type JWTHandler struct {
-	tokenRepo *Repository
+	repo      *Repository
 	connRepo  *connection_data.Repository
 	jwtSecret string
 }
 
-func NewJWTHandler(
-	tokenRepo *Repository,
-	connRepo *connection_data.Repository,
-	jwtSecret string,
-) *JWTHandler {
+func NewHandler(repo *Repository, connRepo *connection_data.Repository, jwtSecret string) *JWTHandler {
 	return &JWTHandler{
-		tokenRepo: tokenRepo,
+		repo:      repo,
 		connRepo:  connRepo,
 		jwtSecret: jwtSecret,
 	}
 }
 
-func (h *JWTHandler) IssueToken(c *gin.Context) {
-	tenantID := c.GetString("tenant_id")
+func (h *JWTHandler) Issue(c *gin.Context) {
+	tenantID := c.GetHeader("X-Tenant-ID")
 	if tenantID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant_id not found in context"})
 		return
 	}
 
-	var req claims.JWTIssueRequest
+	var req NewJWTToken
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -56,9 +50,11 @@ func (h *JWTHandler) IssueToken(c *gin.Context) {
 	now := time.Now()
 	ttl := time.Duration(req.TTLSeconds) * time.Second
 	expiresAt := now.Add(ttl)
-	jti := uuid.New().String()
+	jti := GenerateJTI()
 
-	pinoqlClaims := claims.PinoQLClaims{
+	permissions := claims.DefaultReadWritePermissions()
+
+	claimsData := claims.PinoQLClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   tenantID,
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
@@ -69,42 +65,47 @@ func (h *JWTHandler) IssueToken(c *gin.Context) {
 		},
 		TenantID:      tenantID,
 		ConnectionIDs: req.ConnectionIDs,
-		Permissions:   req.Permissions,
+		Permissions:   permissions,
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, pinoqlClaims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claimsData)
 	signedToken, err := token.SignedString([]byte(h.jwtSecret))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign token"})
 		return
 	}
 
-	connectionIDsJSON, _ := json.Marshal(req.ConnectionIDs)
-	newToken := NewJWTToken{
+	connectionIDsJSON, err := SerializeConnectionIDs(req.ConnectionIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to serialize connection IDs"})
+		return
+	}
+
+	insertData := InsertTokenData{
 		JTI:           jti,
 		TenantID:      tenantID,
-		ConnectionIDs: string(connectionIDsJSON),
+		ConnectionIDs: connectionIDsJSON,
 		IssuedAt:      now,
 		ExpiresAt:     expiresAt,
 	}
 
-	err = h.tokenRepo.InsertToken(newToken)
+	err = h.repo.InsertToken(insertData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to store token"})
 		return
 	}
 
-	response := claims.JWTIssueResponse{
-		Token:     signedToken,
-		ExpiresAt: expiresAt.Unix(),
-		JTI:       jti,
+	response := map[string]interface{}{
+		"token":      signedToken,
+		"expires_at": expiresAt.Unix(),
+		"jti":        jti,
 	}
 
 	c.JSON(http.StatusCreated, response)
 }
 
-func (h *JWTHandler) RevokeToken(c *gin.Context) {
-	tenantID := c.GetString("tenant_id")
+func (h *JWTHandler) Revoke(c *gin.Context) {
+	tenantID := c.GetHeader("X-Tenant-ID")
 	if tenantID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant_id not found in context"})
 		return
@@ -116,7 +117,7 @@ func (h *JWTHandler) RevokeToken(c *gin.Context) {
 		return
 	}
 
-	token, err := h.tokenRepo.GetTokenByJTI(req.JTI)
+	token, err := h.repo.GetTokenByJTI(req.JTI)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
 		return
@@ -127,7 +128,7 @@ func (h *JWTHandler) RevokeToken(c *gin.Context) {
 		return
 	}
 
-	err = h.tokenRepo.RevokeToken(req.JTI)
+	err = h.repo.RevokeToken(req.JTI)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -136,8 +137,8 @@ func (h *JWTHandler) RevokeToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "token revoked successfully"})
 }
 
-func (h *JWTHandler) ListTokens(c *gin.Context) {
-	tenantID := c.GetString("tenant_id")
+func (h *JWTHandler) List(c *gin.Context) {
+	tenantID := c.GetHeader("X-Tenant-ID")
 	if tenantID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant_id not found in context"})
 		return
@@ -146,7 +147,7 @@ func (h *JWTHandler) ListTokens(c *gin.Context) {
 	limit := 50
 	offset := 0
 
-	tokens, err := h.tokenRepo.ListTokensByTenant(tenantID, limit, offset)
+	tokens, err := h.repo.ListTokensByTenant(tenantID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
