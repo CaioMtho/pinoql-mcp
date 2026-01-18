@@ -10,19 +10,19 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type ConnectionDataRepository struct {
+type Repository struct {
 	db *sqlx.DB
 	cm *crypto.CryptoManager
 }
 
-func NewConnectionDataRepository(db *sqlx.DB, cm *crypto.CryptoManager) *ConnectionDataRepository {
-	return &ConnectionDataRepository{
+func NewConnectionDataRepository(db *sqlx.DB, cm *crypto.CryptoManager) *Repository {
+	return &Repository{
 		db: db,
 		cm: cm,
 	}
 }
 
-func (r *ConnectionDataRepository) InsertConnection(data NewConnectionData) (*ConnectionDataQuery, error) {
+func (r *Repository) InsertConnection(data NewConnectionData) (*ConnectionDataQuery, error) {
 	envelope, err := r.cm.Encrypt([]byte(data.DSN))
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt DSN: %w", err)
@@ -61,7 +61,7 @@ func (r *ConnectionDataRepository) InsertConnection(data NewConnectionData) (*Co
 	return r.GetConnectionByID(data.TenantID, id)
 }
 
-func (r *ConnectionDataRepository) GetConnectionByID(tenantID, connectionID string) (*ConnectionDataQuery, error) {
+func (r *Repository) GetConnectionByID(tenantID, connectionID string) (*ConnectionDataQuery, error) {
 	var cred ConnectionData
 
 	query := `
@@ -94,7 +94,7 @@ func (r *ConnectionDataRepository) GetConnectionByID(tenantID, connectionID stri
 	}, nil
 }
 
-func (r *ConnectionDataRepository) GetConnectionWithDSN(tenantID, connectionID string) (*ConnectionData, error) {
+func (r *Repository) GetConnectionWithDSN(tenantID, connectionID string) (*ConnectionData, error) {
 	var cred ConnectionData
 
 	query := `
@@ -127,7 +127,7 @@ func (r *ConnectionDataRepository) GetConnectionWithDSN(tenantID, connectionID s
 	return &cred, nil
 }
 
-func (r *ConnectionDataRepository) ListConnections(tenantID string) ([]*ConnectionDataQuery, error) {
+func (r *Repository) ListConnections(tenantID string) ([]*ConnectionDataQuery, error) {
 	var connections []*ConnectionDataQuery
 
 	query := `
@@ -147,7 +147,7 @@ func (r *ConnectionDataRepository) ListConnections(tenantID string) ([]*Connecti
 	return connections, nil
 }
 
-func (r *ConnectionDataRepository) UpdateConnection(tenantID, connectionID string, update UpdateConnectionData) error {
+func (r *Repository) UpdateConnection(tenantID, connectionID string, update UpdateConnectionData) error {
 	if update.DSN != nil {
 		envelope, err := r.cm.Encrypt([]byte(*update.DSN))
 		if err != nil {
@@ -239,7 +239,7 @@ func (r *ConnectionDataRepository) UpdateConnection(tenantID, connectionID strin
 	return nil
 }
 
-func (r *ConnectionDataRepository) DeleteConnection(tenantID, connectionID string) error {
+func (r *Repository) DeleteConnection(tenantID, connectionID string) error {
 	query := `
 		UPDATE connection_data 
 		SET is_active = 0, updated_at = CURRENT_TIMESTAMP
@@ -262,7 +262,7 @@ func (r *ConnectionDataRepository) DeleteConnection(tenantID, connectionID strin
 	return nil
 }
 
-func (r *ConnectionDataRepository) HardDeleteConnection(tenantID, connectionID string) error {
+func (r *Repository) HardDeleteConnection(tenantID, connectionID string) error {
 	query := `
 		DELETE FROM connection_data
 		WHERE id = ? AND tenant_id = ?

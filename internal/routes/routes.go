@@ -1,0 +1,69 @@
+package routes
+
+import (
+	"net/http"
+
+	"github.com/CaioMtho/pinoql-mcp/internal/credentials/audit"
+	"github.com/CaioMtho/pinoql-mcp/internal/credentials/connection_data"
+	"github.com/CaioMtho/pinoql-mcp/internal/credentials/middleware"
+	"github.com/CaioMtho/pinoql-mcp/internal/credentials/tenant"
+	"github.com/CaioMtho/pinoql-mcp/internal/credentials/token"
+	"github.com/gin-gonic/gin"
+)
+
+type RouterConfig struct {
+	ConnectionDataHandler *connection_data.ConnectionHandler
+	TokenHandler          *token.JWTHandler
+	TenantHandler         *tenant.TenantHandler
+	AuditHandler          *audit.Handler
+	AuthMiddleware        *middleware.AuthMiddleware
+	MCPHandler            http.Handler
+}
+
+func SetupRoutes(r *gin.Engine, cfg *RouterConfig) {
+	api := r.Group("/api/v1")
+
+	api.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
+	tenants := api.Group("/tenants")
+	{
+		tenants.POST("", cfg.TenantHandler.CreateTenant)
+		tenants.GET("", cfg.TenantHandler.ListTenants)
+		tenants.GET("/:id", cfg.TenantHandler.GetTenant)
+		tenants.PUT("/:id", cfg.TenantHandler.UpdateTenant)
+		tenants.DELETE("/:id", cfg.TenantHandler.DeleteTenant)
+	}
+
+	connections := api.Group("/connections")
+	connections.Use(cfg.AuthMiddleware.RequireAPIKey())
+	{
+		connections.POST("", cfg.ConnectionDataHandler.CreateConnection)
+		connections.GET("", cfg.ConnectionDataHandler.ListConnections)
+		connections.GET("/:id", cfg.ConnectionDataHandler.GetConnection)
+		connections.PUT("/:id", cfg.ConnectionDataHandler.UpdateConnection)
+		connections.DELETE("/:id", cfg.ConnectionDataHandler.DeleteConnection)
+	}
+
+	jwt := api.Group("/jwt")
+	jwt.Use(cfg.AuthMiddleware.RequireAPIKey())
+	{
+		jwt.POST("/issue", cfg.TokenHandler.IssueToken)
+		jwt.POST("/revoke", cfg.TokenHandler.RevokeToken)
+		jwt.GET("/list", cfg.TokenHandler.ListTokens)
+	}
+
+	auditRoutes := api.Group("/audit")
+	auditRoutes.Use(cfg.AuthMiddleware.RequireAPIKey())
+	{
+		auditRoutes.GET("/logs", cfg.AuditHandler.ListLogs)
+		auditRoutes.GET("/stats", cfg.AuditHandler.GetStats)
+	}
+
+	mcpGroup := r.Group("/mcp")
+	mcpGroup.Use(cfg.AuthMiddleware.RequireAuth())
+	{
+		mcpGroup.Any("", gin.WrapH(cfg.MCPHandler))
+	}
+}

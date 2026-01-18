@@ -9,15 +9,15 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type JWTTokenRepository struct {
+type Repository struct {
 	db *sqlx.DB
 }
 
-func NewJWTTokenRepository(db *sqlx.DB) *JWTTokenRepository {
-	return &JWTTokenRepository{db: db}
+func NewJWTTokenRepository(db *sqlx.DB) *Repository {
+	return &Repository{db: db}
 }
 
-func (r *JWTTokenRepository) InsertToken(data NewJWTToken) error {
+func (r *Repository) InsertToken(data NewJWTToken) error {
 	query := `
 		INSERT INTO jwt_tokens (jti, tenant_id, connection_ids, issued_at, expires_at, revoked)
 		VALUES (:jti, :tenant_id, :connection_ids, :issued_at, :expires_at, 0)
@@ -31,7 +31,7 @@ func (r *JWTTokenRepository) InsertToken(data NewJWTToken) error {
 	return nil
 }
 
-func (r *JWTTokenRepository) GetTokenByJTI(jti string) (*JWTToken, error) {
+func (r *Repository) GetTokenByJTI(jti string) (*JWTToken, error) {
 	var token JWTToken
 
 	query := `
@@ -51,7 +51,7 @@ func (r *JWTTokenRepository) GetTokenByJTI(jti string) (*JWTToken, error) {
 	return &token, nil
 }
 
-func (r *JWTTokenRepository) IsTokenRevoked(jti string) (bool, error) {
+func (r *Repository) IsTokenRevoked(jti string) (bool, error) {
 	var revoked bool
 
 	query := `SELECT revoked FROM jwt_tokens WHERE jti = ?`
@@ -67,7 +67,7 @@ func (r *JWTTokenRepository) IsTokenRevoked(jti string) (bool, error) {
 	return revoked, nil
 }
 
-func (r *JWTTokenRepository) RevokeToken(jti string) error {
+func (r *Repository) RevokeToken(jti string) error {
 	query := `
 		UPDATE jwt_tokens 
 		SET revoked = 1, revoked_at = CURRENT_TIMESTAMP
@@ -90,7 +90,7 @@ func (r *JWTTokenRepository) RevokeToken(jti string) error {
 	return nil
 }
 
-func (r *JWTTokenRepository) ListTokensByTenant(tenantID string, limit, offset int) ([]*JWTTokenInfo, error) {
+func (r *Repository) ListTokensByTenant(tenantID string, limit, offset int) ([]*JWTTokenInfo, error) {
 	var tokens []*JWTTokenInfo
 
 	query := `
@@ -114,7 +114,7 @@ func (r *JWTTokenRepository) ListTokensByTenant(tenantID string, limit, offset i
 	return tokens, nil
 }
 
-func (r *JWTTokenRepository) DeleteExpiredTokens() (int64, error) {
+func (r *Repository) DeleteExpiredTokens() (int64, error) {
 	query := `
 		DELETE FROM jwt_tokens
 		WHERE expires_at < CURRENT_TIMESTAMP
@@ -133,7 +133,7 @@ func (r *JWTTokenRepository) DeleteExpiredTokens() (int64, error) {
 	return rowsAffected, nil
 }
 
-func (r *JWTTokenRepository) CountActiveTokensByTenant(tenantID string) (int, error) {
+func (r *Repository) CountActiveTokensByTenant(tenantID string) (int, error) {
 	var count int
 
 	query := `

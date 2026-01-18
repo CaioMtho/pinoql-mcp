@@ -7,15 +7,15 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type LogRepository struct {
+type Repository struct {
 	db *sqlx.DB
 }
 
-func NewAuditLogRepository(db *sqlx.DB) *LogRepository {
-	return &LogRepository{db: db}
+func NewAuditLogRepository(db *sqlx.DB) *Repository {
+	return &Repository{db: db}
 }
 
-func (r *LogRepository) InsertLog(data NewConnectionAuditLog) error {
+func (r *Repository) InsertLog(data NewConnectionAuditLog) error {
 	query := `
 		INSERT INTO connection_audit_log (
 			tenant_id, connection_id, action, query_hash, success, 
@@ -35,7 +35,7 @@ func (r *LogRepository) InsertLog(data NewConnectionAuditLog) error {
 	return nil
 }
 
-func (r *LogRepository) ListLogs(filter AuditLogQuery) ([]*ConnectionAuditLog, error) {
+func (r *Repository) ListLogs(filter AuditLogQuery) ([]*ConnectionAuditLog, error) {
 	var logs []*ConnectionAuditLog
 
 	var whereClauses []string
@@ -111,7 +111,7 @@ func (r *LogRepository) ListLogs(filter AuditLogQuery) ([]*ConnectionAuditLog, e
 	return logs, nil
 }
 
-func (r *LogRepository) GetStatsByConnection(tenantID, connectionID string) (*AuditLogStats, error) {
+func (r *Repository) GetStatsByConnection(tenantID, connectionID string) (*AuditLogStats, error) {
 	var stats AuditLogStats
 
 	query := `
@@ -136,7 +136,7 @@ func (r *LogRepository) GetStatsByConnection(tenantID, connectionID string) (*Au
 	return &stats, nil
 }
 
-func (r *LogRepository) GetStatsByTenant(tenantID string) ([]*AuditLogStats, error) {
+func (r *Repository) GetStatsByTenant(tenantID string) ([]*AuditLogStats, error) {
 	var stats []*AuditLogStats
 
 	query := `
@@ -162,7 +162,7 @@ func (r *LogRepository) GetStatsByTenant(tenantID string) ([]*AuditLogStats, err
 	return stats, nil
 }
 
-func (r *LogRepository) DeleteOldLogs(daysToKeep int) (int64, error) {
+func (r *Repository) DeleteOldLogs(daysToKeep int) (int64, error) {
 	query := `
 		DELETE FROM connection_audit_log
 		WHERE timestamp < datetime('now', '-' || ? || ' days')
