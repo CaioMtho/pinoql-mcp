@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	claims "github.com/CaioMtho/pinoql-mcp/internal/credentials/claims"
+	"github.com/CaioMtho/pinoql-mcp/internal/credentials/claims"
 	"github.com/CaioMtho/pinoql-mcp/internal/credentials/connection_data"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -81,14 +81,13 @@ func (h *JWTHandler) IssueToken(c *gin.Context) {
 
 	connectionIDsJSON, _ := json.Marshal(req.ConnectionIDs)
 	newToken := NewJWTToken{
-		JTI:           jti,
 		TenantID:      tenantID,
 		ConnectionIDs: string(connectionIDsJSON),
 		IssuedAt:      now,
 		ExpiresAt:     expiresAt,
 	}
 
-	err = h.tokenRepo.InsertToken(newToken)
+	err = h.tokenRepo.InsertToken(jti, newToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to store token"})
 		return

@@ -13,7 +13,6 @@ type JWTToken struct {
 }
 
 type NewJWTToken struct {
-	JTI           string    `json:"jti" db:"jti" validate:"required"`
 	TenantID      string    `json:"tenant_id" db:"tenant_id" validate:"required"`
 	ConnectionIDs string    `json:"connection_ids" db:"connection_ids" validate:"required"`
 	IssuedAt      time.Time `json:"issued_at" db:"issued_at"`

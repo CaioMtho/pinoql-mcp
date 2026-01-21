@@ -65,7 +65,7 @@ func main() {
 
 	connDataRepo := connection_data.NewConnectionDataRepository(db, cryptoManager)
 	tenantRepo := tenant.NewTenantRepository(db)
-	tokenRepo := token.NewJWTTokenRepository(db)
+	tokenRepo := token.NewRepository(db)
 	auditRepo := audit.NewAuditLogRepository(db)
 
 	jwtSecret := os.Getenv("JWT_SECRET")

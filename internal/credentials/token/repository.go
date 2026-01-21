@@ -2,10 +2,11 @@ package token
 
 import (
 	"database/sql"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -13,17 +14,17 @@ type Repository struct {
 	db *sqlx.DB
 }
 
-func NewJWTTokenRepository(db *sqlx.DB) *Repository {
+func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) InsertToken(data NewJWTToken) error {
+func (r *Repository) InsertToken(jti string, data NewJWTToken) error {
 	query := `
 		INSERT INTO jwt_tokens (jti, tenant_id, connection_ids, issued_at, expires_at, revoked)
-		VALUES (:jti, :tenant_id, :connection_ids, :issued_at, :expires_at, 0)
+		VALUES (?, ?, ?, ?, ?, 0)
 	`
 
-	_, err := r.db.NamedExec(query, data)
+	_, err := r.db.Exec(query, jti, data.TenantID, data.ConnectionIDs, data.IssuedAt, data.ExpiresAt)
 	if err != nil {
 		return fmt.Errorf("failed to insert JWT token: %w", err)
 	}
@@ -42,7 +43,7 @@ func (r *Repository) GetTokenByJTI(jti string) (*JWTToken, error) {
 
 	err := r.db.Get(&token, query, jti)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("token not found")
 		}
 		return nil, fmt.Errorf("failed to get token: %w", err)
@@ -58,7 +59,7 @@ func (r *Repository) IsTokenRevoked(jti string) (bool, error) {
 
 	err := r.db.Get(&revoked, query, jti)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if err == sql.ErrNoRows {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to check revocation: %w", err)
@@ -148,4 +149,25 @@ func (r *Repository) CountActiveTokensByTenant(tenantID string) (int, error) {
 	}
 
 	return count, nil
+}
+
+func GenerateJTI() string {
+	return uuid.New().String()
+}
+
+func SerializeConnectionIDs(ids []string) (string, error) {
+	data, err := json.Marshal(ids)
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize connection IDs: %w", err)
+	}
+	return string(data), nil
+}
+
+func DeserializeConnectionIDs(data string) ([]string, error) {
+	var ids []string
+	err := json.Unmarshal([]byte(data), &ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deserialize connection IDs: %w", err)
+	}
+	return ids, nil
 }
