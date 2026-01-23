@@ -13,12 +13,14 @@ import (
 type AuthMiddleware struct {
 	jwtSecret string
 	tokenRepo *token.Repository
+	apiKey    string
 }
 
-func NewAuthMiddleware(jwtSecret string, tokenRepo *token.Repository) *AuthMiddleware {
+func NewAuthMiddleware(jwtSecret string, tokenRepo *token.Repository, apiKey string) *AuthMiddleware {
 	return &AuthMiddleware{
 		jwtSecret: jwtSecret,
 		tokenRepo: tokenRepo,
+		apiKey:    apiKey,
 	}
 }
 
@@ -83,18 +85,16 @@ func (m *AuthMiddleware) RequireAPIKey() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, err := m.validateAPIKey(apiKey)
-		if err != nil {
+		if !m.validateAPIKey(apiKey) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid API key"})
 			c.Abort()
 			return
 		}
 
-		c.Set("tenant_id", tenantID)
 		c.Next()
 	}
 }
 
-func (m *AuthMiddleware) validateAPIKey(apiKey string) (string, error) {
-	return "", nil
+func (m *AuthMiddleware) validateAPIKey(apiKey string) bool {
+	return m.apiKey != "" && m.apiKey == apiKey
 }

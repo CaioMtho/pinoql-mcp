@@ -18,10 +18,16 @@ type RouterConfig struct {
 	AuditHandler          *audit.Handler
 	AuthMiddleware        *middleware.AuthMiddleware
 	MCPHandler            http.Handler
+	APIKey                string
+	EnableAuth            bool
 }
 
 func SetupRoutes(r *gin.Engine, cfg *RouterConfig) {
 	api := r.Group("/api/v1")
+
+	if cfg.EnableAuth {
+		api.Use(cfg.AuthMiddleware.RequireAPIKey())
+	}
 
 	api.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})

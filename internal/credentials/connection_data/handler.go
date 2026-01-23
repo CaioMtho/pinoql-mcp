@@ -31,7 +31,7 @@ func (h *ConnectionHandler) CreateConnection(c *gin.Context) {
 }
 
 func (h *ConnectionHandler) GetConnection(c *gin.Context) {
-	tenantID := c.GetString("tenant_id")
+	tenantID := c.GetHeader("X-Tenant-ID")
 	if tenantID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant_id not found in context"})
 		return
@@ -49,7 +49,7 @@ func (h *ConnectionHandler) GetConnection(c *gin.Context) {
 }
 
 func (h *ConnectionHandler) ListConnections(c *gin.Context) {
-	tenantID := c.GetString("tenant_id")
+	tenantID := c.GetHeader("X-Tenant-ID")
 	if tenantID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant_id not found in context"})
 		return

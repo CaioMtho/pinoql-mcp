@@ -7,19 +7,40 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/CaioMtho/pinoql-mcp/internal/connection"
 	"github.com/CaioMtho/pinoql-mcp/internal/credentials/audit"
 	"github.com/CaioMtho/pinoql-mcp/internal/credentials/connection_data"
 	"github.com/CaioMtho/pinoql-mcp/internal/credentials/middleware"
 	"github.com/CaioMtho/pinoql-mcp/internal/credentials/tenant"
 	"github.com/CaioMtho/pinoql-mcp/internal/credentials/token"
 	"github.com/CaioMtho/pinoql-mcp/internal/crypto"
+	"github.com/CaioMtho/pinoql-mcp/internal/mcp"
 	"github.com/CaioMtho/pinoql-mcp/internal/routes"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/spf13/pflag"
 )
+
+var apiKey string
+var enableAuth bool
+
+func init() {
+	pflag.StringVar(&apiKey, "api-key", "", "API key for authentication")
+	pflag.BoolVar(&enableAuth, "enable-auth", false, "Enable authentication")
+	pflag.Parse()
+}
+
+func generateAPIKey() string {
+	key := uuid.New().String()
+	encodedKey := base64.StdEncoding.EncodeToString([]byte(key))
+	fmt.Println("Generated API Key:", encodedKey)
+	os.Setenv("API_KEY", encodedKey)
+	return encodedKey
+}
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -63,6 +84,8 @@ func main() {
 		log.Fatalf("Failed to enable foreign keys: %v", err)
 	}
 
+	connManager := connection.NewConnectionManager()
+
 	connDataRepo := connection_data.NewConnectionDataRepository(db, cryptoManager)
 	tenantRepo := tenant.NewTenantRepository(db)
 	tokenRepo := token.NewRepository(db)
@@ -78,17 +101,32 @@ func main() {
 	tenantHandler := tenant.NewTenantHandler(tenantRepo)
 	auditHandler := audit.NewAuditHandler(auditRepo)
 
-	authMiddleware := middleware.NewAuthMiddleware(jwtSecret, tokenRepo)
+	var generatedAPIKey string
+	if enableAuth {
+		generatedAPIKey = generateAPIKey()
+	}
 
-	mcpServer := mcp.NewServer(&mcp.Implementation{
+	authMiddleware := middleware.NewAuthMiddleware(jwtSecret, tokenRepo, generatedAPIKey)
+
+	mcpServer := mcpsdk.NewServer(&mcpsdk.Implementation{
 		Title:   "Pinoql MCP Server",
 		Version: "v0.1.0",
 	}, nil)
 
-	mcpHandler := mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return mcpServer },
-		&mcp.StreamableHTTPOptions{},
+	toolDeps := &mcp.ToolDependencies{
+		ConnManager: connManager,
+		ConnRepo:    connDataRepo,
+		AuditRepo:   auditRepo,
+	}
+
+	mcp.RegisterTools(mcpServer, toolDeps)
+
+	baseMCPHandler := mcpsdk.NewStreamableHTTPHandler(
+		func(*http.Request) *mcpsdk.Server { return mcpServer },
+		&mcpsdk.StreamableHTTPOptions{},
 	)
+
+	mcpHandler := mcp.NewMCPContextHandler(baseMCPHandler)
 
 	r := gin.Default()
 
@@ -103,9 +141,12 @@ func main() {
 		AuditHandler:          auditHandler,
 		AuthMiddleware:        authMiddleware,
 		MCPHandler:            mcpHandler,
+		APIKey:                generatedAPIKey,
+		EnableAuth:            enableAuth,
 	}
 
 	routes.SetupRoutes(r, routerConfig)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
