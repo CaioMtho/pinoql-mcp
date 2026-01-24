@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/claims"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/token"
+	"github.com/CaioMtho/pinoql-mcp/internal/claims"
+	"github.com/CaioMtho/pinoql-mcp/internal/token"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )

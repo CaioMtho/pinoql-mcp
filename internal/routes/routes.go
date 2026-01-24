@@ -3,11 +3,11 @@ package routes
 import (
 	"net/http"
 
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/audit"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/connection_data"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/middleware"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/tenant"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/token"
+	"github.com/CaioMtho/pinoql-mcp/internal/audit"
+	"github.com/CaioMtho/pinoql-mcp/internal/connection_data"
+	"github.com/CaioMtho/pinoql-mcp/internal/middleware"
+	"github.com/CaioMtho/pinoql-mcp/internal/tenant"
+	"github.com/CaioMtho/pinoql-mcp/internal/token"
 	"github.com/gin-gonic/gin"
 )
 

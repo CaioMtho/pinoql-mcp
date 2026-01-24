@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/audit"
+	"github.com/CaioMtho/pinoql-mcp/internal/audit"
 )
 
 func NewAuditLog(tenantID, connectionID, action, query string, success bool, errorMsg string, execTime, rowsAffected int) audit.NewConnectionAuditLog {

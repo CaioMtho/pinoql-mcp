@@ -3,9 +3,9 @@ package mcp
 import (
 	"context"
 
+	"github.com/CaioMtho/pinoql-mcp/internal/audit"
 	"github.com/CaioMtho/pinoql-mcp/internal/connection"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/audit"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/connection_data"
+	"github.com/CaioMtho/pinoql-mcp/internal/connection_data"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

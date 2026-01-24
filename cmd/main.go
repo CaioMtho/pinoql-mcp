@@ -7,15 +7,15 @@ import (
 	"net/http"
 	"os"
 
+	audit2 "github.com/CaioMtho/pinoql-mcp/internal/audit"
 	"github.com/CaioMtho/pinoql-mcp/internal/connection"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/audit"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/connection_data"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/middleware"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/tenant"
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/token"
+	connection_data2 "github.com/CaioMtho/pinoql-mcp/internal/connection_data"
 	"github.com/CaioMtho/pinoql-mcp/internal/crypto"
 	"github.com/CaioMtho/pinoql-mcp/internal/mcp"
+	"github.com/CaioMtho/pinoql-mcp/internal/middleware"
 	"github.com/CaioMtho/pinoql-mcp/internal/routes"
+	tenant2 "github.com/CaioMtho/pinoql-mcp/internal/tenant"
+	token2 "github.com/CaioMtho/pinoql-mcp/internal/token"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -86,20 +86,20 @@ func main() {
 
 	connManager := connection.NewConnectionManager()
 
-	connDataRepo := connection_data.NewConnectionDataRepository(db, cryptoManager)
-	tenantRepo := tenant.NewTenantRepository(db)
-	tokenRepo := token.NewRepository(db)
-	auditRepo := audit.NewAuditLogRepository(db)
+	connDataRepo := connection_data2.NewConnectionDataRepository(db, cryptoManager)
+	tenantRepo := tenant2.NewTenantRepository(db)
+	tokenRepo := token2.NewRepository(db)
+	auditRepo := audit2.NewAuditLogRepository(db)
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		log.Fatal("JWT_SECRET environment variable is required")
 	}
 
-	connDataHandler := connection_data.NewConnectionHandler(connDataRepo)
-	tokenHandler := token.NewHandler(tokenRepo, connDataRepo, jwtSecret)
-	tenantHandler := tenant.NewTenantHandler(tenantRepo)
-	auditHandler := audit.NewAuditHandler(auditRepo)
+	connDataHandler := connection_data2.NewConnectionHandler(connDataRepo)
+	tokenHandler := token2.NewHandler(tokenRepo, connDataRepo, jwtSecret)
+	tenantHandler := tenant2.NewTenantHandler(tenantRepo)
+	auditHandler := audit2.NewAuditHandler(auditRepo)
 
 	var generatedAPIKey string
 	if enableAuth {

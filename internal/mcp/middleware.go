@@ -3,7 +3,7 @@ package mcp
 import (
 	"net/http"
 
-	"github.com/CaioMtho/pinoql-mcp/internal/credentials/claims"
+	"github.com/CaioMtho/pinoql-mcp/internal/claims"
 	"github.com/gin-gonic/gin"
 )
 

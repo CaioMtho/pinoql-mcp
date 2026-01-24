@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	credClaims "github.com/CaioMtho/pinoql-mcp/internal/claims"
 	"github.com/CaioMtho/pinoql-mcp/internal/connection"
-	credClaims "github.com/CaioMtho/pinoql-mcp/internal/credentials/claims"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
